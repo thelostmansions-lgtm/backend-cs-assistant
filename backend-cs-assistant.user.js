@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.1
+// @version      1.0.2
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -10,6 +10,8 @@
 // @match        *https://777wz_xsese3s.indback666.com/*
 // @match        *https://rk5_vcxs4s.indback666.com/*
 // @match        *https://rk789_pxsu3s.indback666.com/*
+// @match        *https://222i_pymi3s.indback666.com/*
+// @match        *https://rszz_dkxs5s.indback666.com/*
 // @match        *https://app.salesmartly.com/*
 // @match        *https://app.salesmartly.cc/*
 // @match        *https://app.salesmartly.vip/*
@@ -103,6 +105,18 @@ const RESET_PIN_VIDEO_TEMPLATE = {
 // Template video khusus Reset Sandi Login.
 const RESET_LOGIN_VIDEO_TEMPLATE = {
     intro: 'Mohon kirim video verifikasi untuk Reset Sandi Login.',
+    extra: ''
+};
+
+// Template video khusus Reset Video Verifikasi. Bisa diedit mandiri.
+const RESET_VIDEO_VERIFIKASI_TEMPLATE = {
+    intro: 'Mohon kirim video verifikasi dengan ketentuan.',
+    extra: ''
+};
+
+// Template video khusus Lupa Akun.
+const LUPA_AKUN_VIDEO_TEMPLATE = {
+    intro: 'Untuk membantu lupa akun/ganti password, kami perlu verifikasi untuk memastikan keamanan akun ya bos :',
     extra: ''
 };
      // ---------- UTILITAS ----------
@@ -407,11 +421,11 @@ function formatBackendDateTime(value) {
      }
 
      function makeResetVideoMessage(kind, wd, deposits, banks, wallets) {
-    const isPin = kind === 'Reset PIN Penarikan';
-
-    const template = isPin
-        ? RESET_PIN_VIDEO_TEMPLATE
-        : RESET_LOGIN_VIDEO_TEMPLATE;
+    const template = kind === 'Reset Video Verifikasi'
+        ? RESET_VIDEO_VERIFIKASI_TEMPLATE
+        : kind === 'Reset PIN Penarikan'
+            ? RESET_PIN_VIDEO_TEMPLATE
+            : RESET_LOGIN_VIDEO_TEMPLATE;
 
     const message = makeMessage(
         'Video Verifikasi',
@@ -423,7 +437,8 @@ function formatBackendDateTime(value) {
 
     if (!message) return null;
 
-    const videoIntro = 'Untuk membantu lupa akun/ganti password, kami perlu verifikasi untuk memastikan keamanan akun ya bos :';
+    const videoIntro =
+        'Mohon kirim video verifikasi dengan ketentuan.';
 
     return message.replace(
         videoIntro,
@@ -448,7 +463,7 @@ function formatBackendDateTime(value) {
              return null;
          }
 
-         if (kind === 'Video Verifikasi') {
+         if (kind === 'Video Verifikasi' || kind === 'Lupa Akun') {
     let appName = '';
 
     if (latestWD) {
@@ -461,10 +476,13 @@ function formatBackendDateTime(value) {
         appName = clean(latestDeposit.type) || 'xxx';
     }
 
-    const lines = [
-        'Untuk membantu lupa akun/ganti password, kami perlu verifikasi untuk memastikan keamanan akun ya bos : ',
-        '',
-        'Mohon kirim video verifikasi dengan ketentuan.',
+    const videoTemplate = kind === 'Lupa Akun'
+    ? LUPA_AKUN_VIDEO_TEMPLATE
+    : RESET_VIDEO_VERIFIKASI_TEMPLATE;
+
+const lines = [
+    videoTemplate.intro,
+    '',
         'Rekam menggunakan HP lain, bukan screen record.',
         'Mulai dari layar Home HP.',
         `Buka aplikasi ${latestWD ? appName : 'Ewallet/Bank yang anda gunakan untuk kirim uang'}.`,
@@ -614,30 +632,47 @@ function formatBackendDateTime(value) {
 
      // ---------- TOMBOL BACKEND ----------
      function addButtons() {
-         const panel = document.querySelector('.layui-panel._recharge_withdraw_panel');
-         if (!panel || panel.querySelector('.cs-ra-buttons')) return;
+    const target = document.querySelector('.layui-row.layui-col-space12')
+        ?.parentElement;
+
+    if (!target || document.querySelector('.cs-ra-buttons')) return;
 
 
          const wrapper = document.createElement('div');
          wrapper.className = 'cs-ra-buttons';
          wrapper
          wrapper.style.cssText = `
-             display:flex;
-             gap:8px;
-             flex-wrap:wrap;
-             margin-top:12px;
-             padding:10px 0;
-             background:transparent;
-             border:none;
-             border-radius:0;
-             box-shadow:none;
-         `;
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: max-content;
+    max-width: calc(100vw - 24px);
+    padding: 12px;
+    box-sizing: border-box;
+    background: rgba(9, 15, 29, 0.94);
+    border: 1px solid rgba(100, 160, 255, 0.28);
+    border-radius: 14px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.42),
+        0 0 24px rgba(59, 130, 246, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    z-index: 99999;
+`;
 
 
          const buttons = [
     { label: 'Reset PIN Penarikan', color: '#1677ff' },
     { label: 'Reset Sandi Login', color: '#16a34a' },
-    { label: 'Lupa Akun', color: '#9333ea', action: 'Video Verifikasi' }
+    { label: 'Lupa Akun', color: '#9333ea', action: 'Lupa Akun' },
+    { label: 'Video Verifikasi', color: '#dc2626', action: 'Video Verifikasi' }
 ];
 
          for (const item of buttons) {
@@ -646,34 +681,70 @@ function formatBackendDateTime(value) {
              button.textContent = item.label;
 
              button.style.cssText = `
-                 position:relative;
-                 overflow:hidden;
-                 background:linear-gradient(135deg,${item.color} 0%,rgba(12,20,38,.98) 145%);
-                 color:#fff;
-                 border:1px solid ${item.color};
-                 border-radius:6px;
-                 padding:7px 11px;
-                 cursor:pointer;
-                 font-size:11px;
-                 font-weight:600;
-                 letter-spacing:.2px;
-                 text-shadow:0 1px 3px rgba(0,0,0,.5);
-                 box-shadow:0 0 7px ${item.color}30,inset 0 1px 0 rgba(255,255,255,.12);
-                 transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
-             `;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: linear-gradient(
+        135deg,
+        ${item.color}24 0%,
+        rgba(15, 23, 42, 0.96) 100%
+    );
+    color: #eaf2ff;
+    border: 1px solid ${item.color}85;
+    border-radius: 8px;
+    padding: 9px 13px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.35px;
+    white-space: nowrap;
+    text-shadow: 0 0 10px ${item.color}40;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 2px 8px rgba(0, 0, 0, 0.18);
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        filter 0.2s ease;
+`;
 
 
              button.addEventListener('mouseenter', () => {
-                 button.style.transform = 'translateY(-2px)';
-                 button.style.boxShadow = `0 0 18px ${item.color}80,inset 0 1px 0 rgba(255,255,255,.25)`;
-                 button.style.filter = 'brightness(1.18)';
-             });
+    button.style.transform = 'translateY(-2px)';
+    button.style.borderColor = item.color;
+    button.style.background = `
+        linear-gradient(
+            135deg,
+            ${item.color}40 0%,
+            rgba(15, 23, 42, 0.98) 100%
+        )
+    `;
+    button.style.boxShadow = `
+        0 0 14px ${item.color}30,
+        inset 0 1px 0 rgba(255, 255, 255, 0.12)
+    `;
+    button.style.filter = 'brightness(1.12)';
+});
 
-             button.addEventListener('mouseleave', () => {
-                 button.style.transform = 'translateY(0)';
-                 button.style.boxShadow = `0 0 10px ${item.color}35,inset 0 1px 0 rgba(255,255,255,.18)`;
-                 button.style.filter = 'brightness(1)';
-             });
+button.addEventListener('mouseleave', () => {
+    button.style.transform = 'translateY(0)';
+    button.style.borderColor = `${item.color}85`;
+    button.style.background = `
+        linear-gradient(
+            135deg,
+            ${item.color}24 0%,
+            rgba(15, 23, 42, 0.96) 100%
+        )
+    `;
+    button.style.boxShadow = `
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 2px 8px rgba(0, 0, 0, 0.18)
+    `;
+    button.style.filter = 'brightness(1)';
+});
 
              button.addEventListener('click', async () => {
                  const wd = readTransactions('last_three_withdraw_table_container');
@@ -698,7 +769,15 @@ const isResetButton = [
 let message;
 const action = item.action || item.label;
 
-if (isResetButton && balance !== null && balance >= 100) {
+if (item.label === 'Video Verifikasi') {
+    message = makeMessage(
+        'Video Verifikasi',
+        wd,
+        deposits,
+        banks,
+        wallets
+    );
+} else if (isResetButton && balance !== null && balance >= 100) {
     message = makeResetVideoMessage(
         item.label,
         wd,
@@ -708,7 +787,7 @@ if (isResetButton && balance !== null && balance >= 100) {
     );
 } else {
     message = makeMessage(
-    action,
+        action,
         wd,
         deposits,
         banks,
@@ -734,7 +813,7 @@ if (isResetButton && balance !== null && balance >= 100) {
              wrapper.appendChild(button);
          }
 
-         panel.appendChild(wrapper);
+         target.appendChild(wrapper);
 
      }
 
