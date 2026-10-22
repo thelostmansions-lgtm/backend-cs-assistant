@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CS Reply Assistant - Multi Site
 // @namespace    cs.reply.assistant
-// @version      1.0.2
+// @version      1.0.4
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
