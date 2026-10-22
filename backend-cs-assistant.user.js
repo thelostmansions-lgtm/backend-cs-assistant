@@ -132,6 +132,46 @@ const LUPA_AKUN_VIDEO_TEMPLATE = {
     const balance = Number(value);
     return Number.isFinite(balance) ? balance : null;
 }
+     function getGamePlayAmount() {
+    const rows = [...document.querySelectorAll('tr')];
+
+    for (const row of rows) {
+        const amountCell = row.querySelector(
+            'td[data-field="change_amount"]'
+        );
+        const typeCell = row.querySelector(
+            'td[data-field="type"]'
+        );
+
+        if (!amountCell || !typeCell) continue;
+
+        const type = clean(typeCell.innerText || typeCell.textContent);
+        if (!['Climbing ranks in games', '游戏上分'].includes(type)) {
+            continue;
+        }
+
+        const amountElement = amountCell.querySelector('span');
+        if (!amountElement) continue;
+
+        const color = clean(amountElement.style.color).toLowerCase();
+        if (color !== 'green' && color !== 'rgb(0, 128, 0)') {
+            continue;
+        }
+
+        const amountText = clean(
+            amountElement.innerText || amountElement.textContent
+        ).replace(/,/g, '');
+
+        const amount = Number(amountText);
+
+        if (Number.isFinite(amount)) {
+            return Math.abs(amount);
+        }
+    }
+
+    return null;
+}
+
 function formatBackendDateTime(value) {
     const text = clean(value);
 
@@ -640,7 +680,6 @@ const lines = [
 
          const wrapper = document.createElement('div');
          wrapper.className = 'cs-ra-buttons';
-         wrapper
          wrapper.style.cssText = `
     position: fixed;
     bottom: 16px;
@@ -777,7 +816,44 @@ if (item.label === 'Video Verifikasi') {
         banks,
         wallets
     );
-} else if (isResetButton && balance !== null && balance >= 100) {
+} else if (item.label === 'Reset PIN Penarikan') {
+    let verificationBalance = balance;
+
+    if (balance === 0) {
+        const gameAmount = getGamePlayAmount();
+
+        if (gameAmount === null) {
+            console.warn(
+                'CS Reply Assistant: Saldo 0.00, tetapi nominal permainan tidak ditemukan. Verifikasi tidak dibuat.'
+            );
+            return;
+        }
+
+        verificationBalance = gameAmount;
+    }
+
+    if (verificationBalance >= 100) {
+        message = makeResetVideoMessage(
+            item.label,
+            wd,
+            deposits,
+            banks,
+            wallets
+        );
+    } else {
+        message = makeMessage(
+            action,
+            wd,
+            deposits,
+            banks,
+            wallets
+        );
+    }
+} else if (
+    item.label === 'Reset Sandi Login' &&
+    balance !== null &&
+    balance >= 100
+) {
     message = makeResetVideoMessage(
         item.label,
         wd,
