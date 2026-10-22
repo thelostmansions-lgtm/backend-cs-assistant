@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         CS Reply Assistant - Multi Site
+// @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
 // @version      1.0.1
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
