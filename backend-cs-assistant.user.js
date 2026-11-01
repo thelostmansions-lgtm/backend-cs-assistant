@@ -819,20 +819,22 @@ if (item.label === 'Video Verifikasi') {
 } else if (item.label === 'Reset PIN Penarikan') {
     let verificationBalance = balance;
 
-   if (balance === 0) {
-    const gameAmount = getGamePlayAmount();
+    // Jika saldo = 0, cari nominal "Climbing ranks in games / 游戏上分".
+    if (balance === 0) {
+        const gameAmount = getGamePlayAmount();
 
-    // Jika nominal permainan ditemukan, gunakan nominal tersebut
-    // sebagai dasar menentukan jenis verifikasi.
-    if (gameAmount !== null) {
+        // Jika nominal permainan tidak ditemukan, jangan buat verifikasi.
+        if (gameAmount === null) {
+            console.warn(
+                'CS Reply Assistant: Saldo 0.00, tetapi nominal permainan tidak ditemukan. Verifikasi tidak dibuat.'
+            );
+            return;
+        }
+
         verificationBalance = gameAmount;
     }
-}
 
-// Nominal >= 100 menggunakan Video Verifikasi.
-// Nominal < 100 menggunakan verifikasi biasa.
-if (verificationBalance >= 100) {
-
+    // Saldo/nominal permainan >= 100 → Video Verifikasi.
     if (verificationBalance >= 100) {
         message = makeResetVideoMessage(
             item.label,
@@ -842,6 +844,11 @@ if (verificationBalance >= 100) {
             wallets
         );
     } else {
+        // Saldo/nominal permainan < 100 → Verifikasi biasa.
+        // makeMessage sudah otomatis memilih:
+        // 1. WD terbaru jika ada WD
+        // 2. Deposit terbaru jika tidak ada WD
+        // 3. Profil rekening/e-wallet jika tidak ada transaksi
         message = makeMessage(
             action,
             wd,
