@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.2
+// @version      1.0.3
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -819,18 +819,19 @@ if (item.label === 'Video Verifikasi') {
 } else if (item.label === 'Reset PIN Penarikan') {
     let verificationBalance = balance;
 
-    if (balance === 0) {
-        const gameAmount = getGamePlayAmount();
+   if (balance === 0) {
+    const gameAmount = getGamePlayAmount();
 
-        if (gameAmount === null) {
-            console.warn(
-                'CS Reply Assistant: Saldo 0.00, tetapi nominal permainan tidak ditemukan. Verifikasi tidak dibuat.'
-            );
-            return;
-        }
-
+    // Jika nominal permainan ditemukan, gunakan nominal tersebut
+    // sebagai dasar menentukan jenis verifikasi.
+    if (gameAmount !== null) {
         verificationBalance = gameAmount;
     }
+}
+
+// Nominal >= 100 menggunakan Video Verifikasi.
+// Nominal < 100 menggunakan verifikasi biasa.
+if (verificationBalance >= 100) {
 
     if (verificationBalance >= 100) {
         message = makeResetVideoMessage(
