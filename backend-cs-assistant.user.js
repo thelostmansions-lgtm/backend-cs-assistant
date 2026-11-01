@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.3
+// @version      1.0.5
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -349,17 +349,62 @@ function formatBackendDateTime(value) {
          }
 
          addMemberCopyButton();
+         addMemberIdClickCopy();
 
-         new MutationObserver(addMemberCopyButton).observe(document.documentElement, {
-             childList: true,
-             subtree: true,
-             characterData: true
-         });
+         new MutationObserver(() => {
+    addMemberCopyButton();
+    addMemberIdClickCopy();
+}).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    characterData: true
+});
 
          setInterval(checkPendingMessage, 1500);
          return;
      }
+// ---------- KLIK ID MEMBER UNTUK COPY ----------
+function addMemberIdClickCopy() {
+    document.querySelectorAll('.session-info__name').forEach(nameElement => {
+        // Hindari pemasangan event berulang
+        if (nameElement.dataset.csIdClickCopy === 'true') return;
 
+        const memberText = clean(nameElement.textContent);
+
+        // Cari angka di dalam teks, meskipun ada huruf atau kalimat lain
+        const idMatch = memberText.match(/\d+/);
+        if (!idMatch) return;
+
+        nameElement.dataset.csIdClickCopy = 'true';
+
+        // Tampilan agar terlihat bisa diklik
+        nameElement.style.cursor = 'pointer';
+        nameElement.title = 'Klik untuk menyalin ID';
+
+        nameElement.addEventListener('click', async () => {
+            const currentText = clean(nameElement.textContent);
+
+            // Ambil angka dari teks meskipun terdapat huruf/kalimat lain
+            const currentId = currentText.match(/\d+/);
+            if (!currentId) return;
+
+            try {
+                await navigator.clipboard.writeText(currentId[0]);
+
+                // Efek sementara sebagai tanda berhasil
+                const originalText = nameElement.textContent;
+                nameElement.textContent = 'Tersalin';
+
+                setTimeout(() => {
+                    nameElement.textContent = originalText;
+                }, 800);
+
+            } catch (error) {
+                console.error('Gagal menyalin ID member:', error);
+            }
+        });
+    });
+}
      // ---------- BACKEND: BACA TABEL ----------
      function getRenderedRows(containerId) {
          const marker = document.getElementById(containerId);
