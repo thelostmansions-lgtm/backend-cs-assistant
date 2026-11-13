@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.5
+// @version      1.0.6
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -310,7 +310,7 @@ function formatBackendDateTime(value) {
                      const currentId = currentName.match(/\d+/);
                      if (!currentId) return;
 
-                     const siteElement = [...document.querySelectorAll('span[data-v-e58095e8] span[data-v-e58095e8]')]
+                     const siteElement = [...document.querySelectorAll('span[data-v-5a371b2e] span[data-v-5a371b2e]')]
                          .find(el => /^[A-Z0-9]+$/.test(clean(el.textContent)));
 
                      const site = siteElement ? clean(siteElement.textContent) : '';
