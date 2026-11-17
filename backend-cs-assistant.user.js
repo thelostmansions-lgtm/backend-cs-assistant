@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.6
+// @version      1.0.7
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -122,6 +122,27 @@ const LUPA_AKUN_VIDEO_TEMPLATE = {
      // ---------- UTILITAS ----------
      const clean = value => (value || '').replace(/\s+/g, ' ').trim();
 
+     async function getSiteCode() {
+    for (let i = 0; i < 10; i++) {
+        const activeSession = document.querySelector(
+            '.session-item.session-item--active'
+        );
+
+        const siteElement = activeSession?.querySelector(
+            '.session-item__content__channel-name__text'
+        );
+
+        const site = clean(siteElement?.textContent);
+
+        if (site) {
+            return site;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    return '';
+}
      function getBalance() {
     const input = document.querySelector('input[name="balance"]');
     if (!input) return null;
@@ -310,10 +331,7 @@ function formatBackendDateTime(value) {
                      const currentId = currentName.match(/\d+/);
                      if (!currentId) return;
 
-                     const siteElement = [...document.querySelectorAll('span[data-v-5a371b2e] span[data-v-5a371b2e]')]
-                         .find(el => /^[A-Z0-9]+$/.test(clean(el.textContent)));
-
-                     const site = siteElement ? clean(siteElement.textContent) : '';
+                     const site = await getSiteCode();
                      const currentLower = currentName.toLowerCase();
 
                      let currentAction = '';
