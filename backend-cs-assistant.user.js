@@ -136,7 +136,7 @@ const LUPA_AKUN_VIDEO_TEMPLATE = {
      };
 
      const GNR_VIDEO_TEMPLATE = {
-         intro: 'Untuk proses verifikasi GNR, mohon kirim video verifikasi berikut:',
+         intro: 'Untuk proses verifikasi Ganti Nomor Rekening, mohon kirim video verifikasi berikut:',
          recordingDevice: 'Rekam menggunakan HP lain, bukan screen record.',
          startInstruction: 'Mulai dari layar Home HP, lalu buka aplikasi bank/e-wallet yang digunakan untuk deposit.',
          depositTitle: 'Tampilkan detail bukti deposit terakhir:',
