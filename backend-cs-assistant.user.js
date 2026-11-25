@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.7
+// @version      1.0.8
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -119,6 +119,39 @@ const LUPA_AKUN_VIDEO_TEMPLATE = {
     intro: 'Untuk membantu lupa akun/ganti password, kami perlu verifikasi untuk memastikan keamanan akun ya bos :',
     extra: ''
 };
+     // ---------- TEMPLATE PESAN GNR ----------
+     // Semua kalimat khusus tombol GNR dapat diedit dari dua template ini.
+     const GNR_SCREENSHOT_TEMPLATE = {
+         intro: 'Untuk proses verifikasi Ganti Nomor Rekening, mohon kirim screenshot berikut:',
+         profileTitle: 'Screenshot profil rekening Anda',
+         depositTitle: 'Bukti transfer deposit terakhir',
+         typeLabel: 'Jenis rekening:',
+         nameLabel: 'Nama pemilik:',
+         numberLabel: 'Nomor rekening/akun:',
+         timeLabel: 'Waktu deposit:',
+         amountLabel: 'Nominal deposit: Rp',
+         instruction: 'Pastikan nama, nomor rekening, dan bukti deposit terlihat jelas.',
+         closing: 'Setelah bukti kami terima, kami akan segera memprosesnya.',
+         thanks: 'Terima kasih.'
+     };
+
+     const GNR_VIDEO_TEMPLATE = {
+         intro: 'Untuk proses verifikasi GNR, mohon kirim video verifikasi berikut:',
+         recordingDevice: 'Rekam menggunakan HP lain, bukan screen record.',
+         startInstruction: 'Mulai dari layar Home HP, lalu buka aplikasi bank/e-wallet yang digunakan untuk deposit.',
+         depositTitle: 'Tampilkan detail bukti deposit terakhir:',
+         timeLabel: 'Waktu deposit:',
+         amountLabel: 'Nominal deposit: Rp',
+         profileTitle: 'Setelah itu, tampilkan profil rekening berikut :',
+         typeLabel: 'Jenis rekening:',
+         nameLabel: 'Nama pemilik:',
+         numberLabel: 'Nomor rekening/akun:',
+         fingerInstruction: 'Tunjukkan jari Anda saat merekam sebagai bukti video asli.',
+         clarityInstruction: 'Pastikan semua data terlihat jelas dan tidak blur.',
+         closing: 'Setelah video kami terima, kami akan segera memprosesnya.',
+         thanks: 'Terima kasih.'
+     };
+
      // ---------- UTILITAS ----------
      const clean = value => (value || '').replace(/\s+/g, ' ').trim();
 
@@ -156,41 +189,60 @@ const LUPA_AKUN_VIDEO_TEMPLATE = {
      function getGamePlayAmount() {
     const rows = [...document.querySelectorAll('tr')];
 
+    const gameTypes = [
+        'climb the game ranks',
+        'climbing ranks in games',
+        'game ranking',
+        '游戏上分',
+        '游戏下分',
+        '上分',
+        '下分'
+    ];
+
+    let highestAmount = null;
+
     for (const row of rows) {
         const amountCell = row.querySelector(
             'td[data-field="change_amount"]'
         );
+
         const typeCell = row.querySelector(
             'td[data-field="type"]'
         );
 
         if (!amountCell || !typeCell) continue;
 
-        const type = clean(typeCell.innerText || typeCell.textContent);
-        if (!['Climbing ranks in games', '游戏上分'].includes(type)) {
-            continue;
-        }
+        const type = clean(
+            typeCell.innerText || typeCell.textContent
+        ).toLowerCase();
 
-        const amountElement = amountCell.querySelector('span');
-        if (!amountElement) continue;
+        const isGameType = gameTypes.some(
+            keyword => type.includes(keyword)
+        );
 
-        const color = clean(amountElement.style.color).toLowerCase();
-        if (color !== 'green' && color !== 'rgb(0, 128, 0)') {
-            continue;
-        }
+        if (!isGameType) continue;
 
         const amountText = clean(
-            amountElement.innerText || amountElement.textContent
-        ).replace(/,/g, '');
+            amountCell.innerText || amountCell.textContent
+        )
+        .replace(/,/g, '')
+        .replace(/[^\d.-]/g, '');
 
         const amount = Number(amountText);
 
-        if (Number.isFinite(amount)) {
-            return Math.abs(amount);
+        if (!Number.isFinite(amount)) continue;
+
+        const absAmount = Math.abs(amount);
+
+        if (
+            highestAmount === null ||
+            absAmount > highestAmount
+        ) {
+            highestAmount = absAmount;
         }
     }
 
-    return null;
+    return highestAmount;
 }
 
 function formatBackendDateTime(value) {
@@ -462,7 +514,12 @@ function addMemberIdClickCopy() {
 
      function cell(row, field) {
          const el = row.querySelector(`td[data-field="${field}"]`);
-         return el ? clean(el.innerText || el.textContent) : '';
+         if (!el) return '';
+
+         // Abaikan tombol GNR yang ditempel di dalam kolom rekening.
+         const clone = el.cloneNode(true);
+         clone.querySelectorAll('.cs-gnr-button').forEach(button => button.remove());
+         return clean(clone.innerText || clone.textContent);
      }
 
      function readTransactions(containerId) {
@@ -733,6 +790,203 @@ const lines = [
          ].join('\n');
      }
 
+     // ---------- PEMBUAT PESAN KHUSUS GNR ----------
+     function makeGnrMessage(profile, latestDeposit, useVideo) {
+         if (!profile || !latestDeposit) return null;
+
+         const hasProfile = Boolean(
+             profile.type || profile.name || profile.number
+         );
+
+         if (!hasProfile) return null;
+
+         const template = useVideo
+             ? GNR_VIDEO_TEMPLATE
+             : GNR_SCREENSHOT_TEMPLATE;
+
+         if (useVideo) {
+             return [
+                 template.intro,
+                 '',
+                 template.recordingDevice,
+                 template.startInstruction,
+                 '',
+                 template.depositTitle,
+                 template.timeLabel + ' ' + (latestDeposit.time || '-'),
+                 template.amountLabel + ' ' + (latestDeposit.amount || '-'),
+                 '',
+                 template.profileTitle,
+                 template.typeLabel + ' ' + (profile.type || '-'),
+                 template.nameLabel + ' ' + (profile.name || '-'),
+                 template.numberLabel + ' ' + (profile.number || '-'),
+                 '',
+                 template.fingerInstruction,
+                 template.clarityInstruction,
+                 template.closing,
+                 template.thanks
+             ].join('\n');
+         }
+
+         return [
+             template.intro,
+             '',
+             '1. ' + template.depositTitle,
+             template.timeLabel + ' ' + (latestDeposit.time || '-'),
+             template.amountLabel + ' ' + (latestDeposit.amount || '-'),
+             '',
+             '2. ' + template.profileTitle,
+             template.typeLabel + ' ' + (profile.type || '-'),
+             template.nameLabel + ' ' + (profile.name || '-'),
+             template.numberLabel + ' ' + (profile.number || '-'),
+             '',
+             template.instruction,
+             template.closing,
+             template.thanks
+         ].join('\n');
+     }
+
+     // ---------- TOMBOL GNR DI SETIAP REKENING ----------
+     function addGnrButtons() {
+         function createGnrButton(targetCell, row, profileKind) {
+             if (!targetCell || targetCell.querySelector('.cs-gnr-button')) return;
+
+             const button = document.createElement('button');
+             button.type = 'button';
+             button.className = 'cs-gnr-button';
+             button.textContent = 'GNR';
+             button.title = 'Siapkan permintaan verifikasi rekening ini';
+
+             button.style.cssText = `
+                 display: inline-block;
+                 margin-left: 8px;
+                 padding: 2px 8px;
+                 font-size: 10px;
+                 font-weight: 700;
+                 color: #ffffff;
+                 background: #2563eb;
+                 border: 1px solid #3b82f6;
+                 border-radius: 5px;
+                 cursor: pointer;
+                 vertical-align: middle;
+                 line-height: 17px;
+             `;
+
+             button.addEventListener('click', function(event) {
+                 event.preventDefault();
+                 event.stopPropagation();
+
+                 // GNR wajib membaca saldo terlebih dahulu.
+                 const balance = getBalance();
+
+                 if (balance === null) {
+                     console.warn('GNR: Saldo member tidak ditemukan.');
+                     return;
+                 }
+
+                 // Aturan sama seperti Reset PIN: saldo 0 memakai nominal game
+                 // jika datanya tersedia. Jika tidak tersedia, tetap dihitung 0.
+                 let verificationBalance = balance;
+
+                 if (balance === 0) {
+                     const gameAmount = getGamePlayAmount();
+                     verificationBalance = gameAmount === null ? 0 : gameAmount;
+                 }
+
+                 // GNR hanya membaca deposit, tidak membaca data WD.
+                 const deposits = readTransactions(
+                     'last_three_recharge_table_container'
+                 );
+
+                 if (!deposits.ok) {
+                     console.warn('GNR: Data deposit gagal dibaca.', deposits.reason);
+                     return;
+                 }
+
+                 const latestDeposit = deposits.rows[0];
+
+                 if (!latestDeposit) {
+                     console.warn('GNR: Bukti deposit terakhir tidak ditemukan.');
+                     return;
+                 }
+
+                 // Ambil hanya profil pada baris tombol yang diklik.
+                 let selectedProfile;
+
+                 if (profileKind === 'bank') {
+                     selectedProfile = {
+                         type: cell(row, 'bank_name'),
+                         name: cell(row, 'bank_user'),
+                         number: cell(row, 'bank_number')
+                     };
+                 } else {
+                     selectedProfile = {
+                         type: cell(row, 'wallet_name'),
+                         name: cell(row, 'real_name'),
+                         number:
+                             cell(row, 'account') ||
+                             cell(row, 'phone') ||
+                             cell(row, 'email')
+                     };
+                 }
+
+                 // Saldo >= 100: video. Saldo < 100: screenshot.
+                 const useVideo = verificationBalance >= 100;
+                 const message = makeGnrMessage(
+                     selectedProfile,
+                     latestDeposit,
+                     useVideo
+                 );
+
+                 if (!message) {
+                     console.warn('GNR: Profil rekening atau pesan tidak valid.');
+                     return;
+                 }
+
+                 try {
+                     GM_setClipboard(message, 'text');
+                     console.log(
+                         `GNR: Pesan ${useVideo ? 'video' : 'screenshot'} berhasil disalin. Saldo: ${verificationBalance}`
+                     );
+                 } catch (error) {
+                     console.error('GNR: Gagal menyalin pesan.', error);
+                 }
+             });
+
+             targetCell.appendChild(button);
+         }
+
+         // REKENING BANK
+         const banks = getRenderedRows('table_bank_card_list');
+
+         if (banks.ok) {
+             banks.rows.forEach(row => {
+                 const numberCell = row.querySelector(
+                     'td[data-field="bank_number"]'
+                 );
+
+                 if (numberCell && clean(numberCell.textContent)) {
+                     createGnrButton(numberCell, row, 'bank');
+                 }
+             });
+         }
+
+         // E-WALLET
+         const wallets = getRenderedRows('table_wallet_list');
+
+         if (wallets.ok) {
+             wallets.rows.forEach(row => {
+                 const accountCell =
+                     row.querySelector('td[data-field="account"]') ||
+                     row.querySelector('td[data-field="phone"]') ||
+                     row.querySelector('td[data-field="email"]');
+
+                 if (accountCell && clean(accountCell.textContent)) {
+                     createGnrButton(accountCell, row, 'wallet');
+                 }
+             });
+         }
+     }
+
      // ---------- TOMBOL BACKEND ----------
      function addButtons() {
     const target = document.querySelector('.layui-row.layui-col-space12')
@@ -888,11 +1142,10 @@ if (item.label === 'Video Verifikasi') {
 
         // Jika nominal permainan tidak ditemukan, jangan buat verifikasi.
         if (gameAmount === null) {
-            console.warn(
-                'CS Reply Assistant: Saldo 0.00, tetapi nominal permainan tidak ditemukan. Verifikasi tidak dibuat.'
-            );
-            return;
-        }
+    verificationBalance = 0;
+} else {
+    verificationBalance = gameAmount;
+}
 
         verificationBalance = gameAmount;
     }
@@ -964,9 +1217,14 @@ if (item.label === 'Video Verifikasi') {
 
      }
 
-     addButtons();
-     new MutationObserver(addButtons).observe(document.documentElement, {
-         childList: true,
-         subtree: true
-     });
+addButtons();
+addGnrButtons();
+
+new MutationObserver(() => {
+  addButtons();
+  addGnrButtons();
+}).observe(document.documentElement, {
+  childList: true,
+  subtree: true
+});
  })();
