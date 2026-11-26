@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         backend-cs-assistant.user
 // @namespace    cs.reply.assistant
-// @version      1.0.8
+// @version      1.0.9
 // @description  Siapkan pesan verifikasi dari data backend ke Salesmartly
 // @updateURL    https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
 // @downloadURL  https://raw.githubusercontent.com/thelostmansions-lgtm/backend-cs-assistant/main/backend-cs-assistant.user.js
@@ -854,7 +854,7 @@ const lines = [
              button.type = 'button';
              button.className = 'cs-gnr-button';
              button.textContent = 'GNR';
-             button.title = 'Siapkan permintaan verifikasi rekening ini';
+             button.title = 'Untuk Verifikasi Ganti Nomor Rekening';
 
              button.style.cssText = `
                  display: inline-block;
